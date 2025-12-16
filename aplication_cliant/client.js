@@ -1,4 +1,4 @@
-let readlineSync = require('readline-sync')
+import readlineSync from 'readline-sync';
 const BaseURL = "http://localhost:3000"
 
 function manu()
@@ -10,16 +10,20 @@ function manu()
                  4.DELETE/secure/resource(Header)
                  5.Call each server endpoint one after the other (in sequence)
                  6.Call all server endpoints in parallel
+                 0.Exit
                  _____________________________________________________________`);
     
 }
 
 
-async function GETgreet(BaseURL,name)
+async function GETgreet(BaseURL)
 {
     try
     {
-        const response = await fetch(`${BaseURL}/greet?name=${name}&lang=en`);
+        let name = readlineSync.question("Enter your name: ")
+        let lang = readlineSync.question("Enter language (en | he | es): ")
+        const response = await fetch(`${BaseURL}/greet?name=${name}&lang=${lang}`);
+        
         if(!response.ok)
         {
             throw new Error(`http: ${response.status}`)
@@ -28,24 +32,25 @@ async function GETgreet(BaseURL,name)
         if(data){
             console.log(data);
             
+            
         }
     }catch(error){
-        console.error(error.message);
+        console.error(`error: ${error.message}`);
         return null;
     }
 }
 
-// GETgreet(BaseURL);
-
 async function POSTMathAverage(BaseURL)
 {
     try{
+        let numbersInput = readlineSync.question("Enter numbers separated by commas: ")
+        let numbers = numbersInput.split(',').map(Number)
         const resource = await fetch(`${BaseURL}/math/average`,{
             method: "POST",
             headers:{
             "Content-Type": "application/json"
             },
-        body: JSON.stringify({"numbers": [10, 20, 30, 40]})}
+        body: JSON.stringify({"numbers": numbers})}
         )
         if(!resource){
             throw new Error(`http: ${response.status}`)
@@ -53,6 +58,7 @@ async function POSTMathAverage(BaseURL)
         const data = await resource.json()
         if (data) {
             console.log(data);
+            
             
         }
     }catch(error){
@@ -62,13 +68,13 @@ async function POSTMathAverage(BaseURL)
 
     
 }
-// POSTMathAverage(BaseURL)
 
 
 async function PUTshoutWord(BaseURL)
 {
     try{
-        const resource = await fetch(`${BaseURL}/shout/:word`,{
+        let word = readlineSync.question("Enter a word to shout: ")
+        const resource = await fetch(`${BaseURL}/shout/${word}`,{
             method : "PUT",
             headers:{
             "Content-Type": "application/json"
@@ -88,14 +94,14 @@ async function PUTshoutWord(BaseURL)
     }
 }
 
-// PUTshoutWord(BaseURL)
 
 async function DELETEsecureResource(BaseURL)
 {
     try{
+        let admin = readlineSync.question("Enter your role to access secure resource: ")
         const resource = await fetch(`${BaseURL}/secure/resource`,{
             method: "DELETE",
-            headers:{"x-role": "admin"}
+            headers:{"x-role": admin}
         })
         if(!resource){
             throw new Error(`http: ${response.status}`)
@@ -111,13 +117,74 @@ async function DELETEsecureResource(BaseURL)
     }
 }
 
-// DELETEsecureResource(BaseURL)
 
-function CallAllEndpoints(BaseURL)
+function CallAllEndpointsSequentially(BaseURL)
 {
-    GETgreet().then(()=>POSTMathAverage()
-.then(()=>PUTshoutWord()
-.then(()=>DELETEsecureResource())))
+  return  GETgreet(BaseURL).then(()=>POSTMathAverage(BaseURL))
+.then(()=>PUTshoutWord(BaseURL))
+.then(()=>DELETEsecureResource(BaseURL))
+.then(()=>{
+    console.log("All endpoints called in sequence");
+}).catch((error)=>{
+    console.error(`error: ${error.message}`);
+})
+
 }
 
-CallAllEndpoints(BaseURL)
+
+
+
+function CallAllEndpointsInParallel(BaseURL)
+{
+    return Promise.all([
+        GETgreet(BaseURL),
+        POSTMathAverage(BaseURL),
+        PUTshoutWord(BaseURL),
+        DELETEsecureResource(BaseURL)
+    ]).then((results)=>{
+        console.log("All endpoints called in parallel");
+    }).catch((error)=>{
+        console.error(`error: ${error.message}`);
+    })
+
+}
+
+
+async function main()
+{
+
+let bool = true
+while(bool)
+{
+    manu()
+    let choice = readlineSync.questionInt("Enter your choice: ")
+    switch(choice)
+    {
+        case 1:
+            await GETgreet(BaseURL);            
+            break;  
+        case 2:
+            await POSTMathAverage(BaseURL);
+            break;  
+        case 3:
+            await PUTshoutWord(BaseURL);
+            break;
+        case 4:
+            await DELETEsecureResource(BaseURL);
+            break;
+        case 5:
+            await CallAllEndpointsSequentially(BaseURL);
+            break;
+        case 6:
+            await CallAllEndpointsInParallel(BaseURL);
+            break;
+        case 0:
+            bool = false;
+            console.log("Exiting...");
+            break;
+
+    }
+}   
+}
+
+main();
